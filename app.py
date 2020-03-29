@@ -2,6 +2,9 @@ from flask      import Flask, jsonify, request, current_app
 from flask.json import JSONEncoder
 from sqlalchemy import create_engine, text
 
+import bcrypt
+import jwt
+
 class CustomJSONEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):
@@ -110,11 +113,28 @@ app.users    = {}
 @app.route("/sign-up", methods=['POST'])
 def sign_up():
     new_user                = request.json
-    new_user["id"]          = app.id_count
-    app.users[app.id_count] = new_user
-    app.id_count            = app.id_count + 1
+    # new_user["id"]          = app.id_count
+    # app.users[app.id_count] = new_user
+    # app.id_count            = app.id_count + 1
 
-    return jsonify(new_user)
+    # return jsonify(new_user)
+    new_user['password'] = bcrypt.hashpw(new_user['password'].encode('UTF-8')), bcrypt.gensalt())
+    new_user_id = app.database.execute(text("""
+        INSERT INTO users(
+            name,
+            email,
+            profile,
+            hashed_password
+        ) VALUES(
+            :name,
+            :email,
+            :profile,
+            :password
+        )
+        """), new_user).lastrowid
+        new_user_info=get_user(new_user_id)
+
+        return jsonify(new_user_info)
 
 app.tweets = []
 @app.route('/tweet', methods = ['POST'])
